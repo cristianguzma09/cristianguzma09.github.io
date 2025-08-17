@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestión de Empanadas</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+            color: #333;
+        }
+        .container {
+            max-width: 90%;
+            margin: 2rem auto;
+            padding: 1.5rem;
+            background-color: #ffffff;
+            border-radius: 0.75rem; /* rounded-xl */
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); /* shadow-lg */
+        }
+        input, select, button {
+            border-radius: 0.5rem; /* rounded-md */
+        }
+        button {
+            transition: background-color 0.3s ease;
+        }
+        button:hover {
+            opacity: 0.9;
+        }
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        .spinner {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            border-left-color: #f97316; /* orange-500 */
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="bg-gray-100 flex flex-col items-center py-8">
+    <div id="loading-overlay" class="loading-overlay hidden">
+        <div class="spinner"></div>
+    </div>
+
+    <div class="container w-full lg:w-3/4 xl:w-2/3">
+        <h1 class="text-3xl font-bold text-center text-orange-600 mb-6">🥟 Gestión de Empanadas 🥟</h1>
+
+        <div class="mb-4 text-center text-gray-600">
+            <p>ID de Usuario: <span id="user-id-display" class="font-semibold text-blue-700 break-all">Cargando...</span></p>
+        </div>
+
+        <!-- Sección para Añadir Producto -->
+        <div class="bg-blue-50 p-6 rounded-xl shadow-md mb-8">
+            <h2 class="text-2xl font-semibold text-blue-700 mb-4">Añadir Tipo de Empanada</h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                <div>
+                    <label for="product-name" class="block text-sm font-medium text-gray-700">Nombre:</label>
+                    <input type="text" id="product-name" placeholder="Empanada de Carne" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                </div>
+                <div>
+                    <label for="initial-stock" class="block text-sm font-medium text-gray-700">Stock Inicial:</label>
+                    <input type="number" id="initial-stock" value="0" min="0" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                </div>
+                <div>
+                    <label for="product-price" class="block text-sm font-medium text-gray-700">Precio (COP):</label>
+                    <input type="number" id="product-price" value="0" min="0" step="100" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                </div>
+            </div>
+            <button onclick="addProduct()" class="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
+                Añadir Empanada
+            </button>
+        </div>
+
+        <!-- Sección de Inventario -->
+        <div class="bg-green-50 p-6 rounded-xl shadow-md mb-8">
+            <h2 class="text-2xl font-semibold text-green-700 mb-4">Inventario Actual</h2>
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-green-100">
+                        <tr>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider rounded-tl-md">Nombre</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Stock</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Precio</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider rounded-tr-md">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="inventory-list" class="bg-white divide-y divide-gray-200">
+                        <!-- Las empanadas se cargarán aquí -->
+                        <tr>
+                            <td colspan="4" class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">No hay productos en el inventario.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Sección para Registrar Venta -->
+        <div class="bg-purple-50 p-6 rounded-xl shadow-md mb-8">
+            <h2 class="text-2xl font-semibold text-purple-700 mb-4">Registrar Venta</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div>
+                    <label for="sale-product" class="block text-sm font-medium text-gray-700">Producto:</label>
+                    <select id="sale-product" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500 sm:text-sm">
+                        <option value="">Selecciona una empanada</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="sale-quantity" class="block text-sm font-medium text-gray-700">Cantidad:</label>
+                    <input type="number" id="sale-quantity" value="1" min="1" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500 sm:text-sm">
+                </div>
+            </div>
+            <button onclick="recordSale()" class="w-full bg-purple-600 text-white py-2 px-4 rounded-md hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2">
+                Registrar Venta
+            </button>
+        </div>
+
+        <!-- Sección de Reporte de Ventas -->
+        <div class="bg-yellow-50 p-6 rounded-xl shadow-md mb-8">
+            <h2 class="text-2xl font-semibold text-yellow-700 mb-4">Reporte de Ventas</h2>
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-yellow-100">
+                        <tr>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider rounded-tl-md">Fecha</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Producto</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cantidad</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider rounded-tr-md">Total</th>
+                        </tr>
+                    </thead>
+                    <tbody id="sales-list" class="bg-white divide-y divide-gray-200">
+                        <!-- Las ventas se cargarán aquí -->
+                        <tr>
+                            <td colspan="4" class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">No hay ventas registradas.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Sección de Ingresos Totales -->
+        <div class="bg-orange-50 p-6 rounded-xl shadow-md text-center">
+            <h2 class="text-2xl font-semibold text-orange-700 mb-4">Ingresos Totales</h2>
+            <p class="text-4xl font-bold text-orange-600" id="total-income">COP 0</p>
+        </div>
+    </div>
+
+    <!-- Custom Modal for Alerts -->
+    <div id="custom-modal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white p-6 rounded-lg shadow-xl max-w-sm w-full">
+            <h3 id="modal-title" class="text-lg font-bold mb-4 text-gray-800"></h3>
+            <p id="modal-message" class="text-gray-700 mb-6"></p>
+            <div class="flex justify-end">
+                <button onclick="closeModal()" class="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-400">
+                    Aceptar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase SDKs -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, getDoc, addDoc, setDoc, updateDoc, deleteDoc, onSnapshot, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Global Firebase variables (provided by the Canvas environment)
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
+        let app;
+        let db;
+        let auth;
+        let userId;
+
+        let products = {}; // Almacena productos con ID como clave para fácil acceso
+        let sales = [];
+        let isAuthReady = false;
+
+        // Referencias a elementos del DOM
+        const loadingOverlay = document.getElementById('loading-overlay');
+        const userIdDisplay = document.getElementById('user-id-display');
+        const productNameInput = document.getElementById('product-name');
+        const initialStockInput = document.getElementById('initial-stock');
+        const productPriceInput = document.getElementById('product-price');
+        const inventoryList = document.getElementById('inventory-list');
+        const saleProductSelect = document.getElementById('sale-product');
+        const saleQuantityInput = document.getElementById('sale-quantity');
+        const salesList = document.getElementById('sales-list');
+        const totalIncomeDisplay = document.getElementById('total-income');
+        const customModal = document.getElementById('custom-modal');
+        const modalTitle = document.getElementById('modal-title');
+        const modalMessage = document.getElementById('modal-message');
+
+        /**
+         * Muestra el modal personalizado con un título y mensaje.
+         * @param {string} title - El título del modal.
+         * @param {string} message - El mensaje a mostrar en el modal.
+         */
+        function showModal(title, message) {
+            modalTitle.textContent = title;
+            modalMessage.textContent = message;
+            customModal.classList.remove('hidden');
+        }
+
+        /**
+         * Cierra el modal personalizado.
+         */
+        function closeModal() {
+            customModal.classList.add('hidden');
+        }
+
+        /**
+         * Muestra el overlay de carga.
+         */
+        function showLoading() {
+            loadingOverlay.classList.remove('hidden');
+        }
+
+        /**
+         * Oculta el overlay de carga.
+         */
+        function hideLoading() {
+            loadingOverlay.classList.add('hidden');
+        }
+
+        /**
+         * Inicializa Firebase y configura los listeners de autenticación y Firestore.
+         */
+        async function initializeFirebase() {
+            showLoading();
+            try {
+                app = initializeApp(firebaseConfig);
+                auth = getAuth(app);
+                db = getFirestore(app);
+
+                // Autenticación: Usar token si está disponible, de lo contrario, iniciar sesión anónimamente.
+                if (initialAuthToken) {
+                    await signInWithCustomToken(auth, initialAuthToken);
+                } else {
+                    await signInAnonymously(auth);
+                }
+
+                // Listener para el estado de autenticación
+                onAuthStateChanged(auth, (user) => {
+                    if (user) {
+                        userId = user.uid;
+                        userIdDisplay.textContent = userId;
+                        isAuthReady = true;
+                        console.log("Usuario autenticado:", userId);
+                        setupFirestoreListeners(); // Configurar listeners una vez que el usuario esté listo
+                    } else {
+                        // Si el usuario no está autenticado (debería ser raro en Canvas), usar un ID aleatorio.
+                        userId = crypto.randomUUID();
+                        userIdDisplay.textContent = userId + " (Anónimo)";
+                        isAuthReady = true;
+                        console.log("Usuario anónimo:", userId);
+                        setupFirestoreListeners(); // Configurar listeners también para usuarios anónimos
+                    }
+                    hideLoading();
+                });
+
+            } catch (error) {
+                console.error("Error al inicializar Firebase o autenticar:", error);
+                showModal("Error de Inicialización", "No se pudo iniciar la aplicación. Inténtalo de nuevo más tarde.");
+                hideLoading();
+            }
+        }
+
+        /**
+         * Configura los listeners de Firestore para productos y ventas.
+         */
+        function setupFirestoreListeners() {
+            if (!isAuthReady || !db || !userId) {
+                console.log("Firebase no listo para configurar listeners.");
+                return;
+            }
+
+            // Path para los datos privados del usuario
+            const userProductsCollectionRef = collection(db, `artifacts/${appId}/users/${userId}/products`);
+            const userSalesCollectionRef = collection(db, `artifacts/${appId}/users/${userId}/sales`);
+
+            // Listener para productos
+            onSnapshot(userProductsCollectionRef, (snapshot) => {
+                products = {}; // Reiniciar productos
+                snapshot.forEach((doc) => {
+                    products[doc.id] = { id: doc.id, ...doc.data() };
+                });
+                renderInventory();
+                populateProductSelect();
+            }, (error) => {
+                console.error("Error al obtener productos:", error);
+                showModal("Error de Datos", "No se pudieron cargar los productos.");
+            });
+
+            // Listener para ventas
+            onSnapshot(userSalesCollectionRef, (snapshot) => {
+                sales = []; // Reiniciar ventas
+                snapshot.forEach((doc) => {
+                    sales.push({ id: doc.id, ...doc.data() });
+                });
+                // Ordenar ventas por fecha descendente
+                sales.sort((a, b) => b.timestamp - a.timestamp);
+                renderSales();
+                updateTotalIncome();
+            }, (error) => {
+                console.error("Error al obtener ventas:", error);
+                showModal("Error de Datos", "No se pudieron cargar las ventas.");
+            });
+        }
+
+        /**
+         * Agrega un nuevo producto al inventario.
+         */
+        async function addProduct() {
+            if (!isAuthReady) {
+                showModal("Inicializando", "Por favor espera a que la aplicación se cargue completamente.");
+                return;
+            }
+
+            const name = productNameInput.value.trim();
+            const initialStock = parseInt(initialStockInput.value);
+            const price = parseFloat(productPriceInput.value);
+
+            if (!name || isNaN(initialStock) || isNaN(price) || initialStock < 0 || price < 0) {
+                showModal("Datos Inválidos", "Por favor, ingresa un nombre, stock inicial y precio válidos para la empanada.");
+                return;
+            }
+
+            // Verificar si el producto ya existe (por nombre)
+            const productsRef = collection(db, `artifacts/${appId}/users/${userId}/products`);
+            const q = query(productsRef, where("name", "==", name));
+            const querySnapshot = await getDocs(q);
+
+            if (!querySnapshot.empty) {
+                showModal("Producto Existente", "Ya existe una empanada con ese nombre. Por favor, elige otro nombre o actualiza el stock existente.");
+                return;
+            }
+
+            showLoading();
+            try {
+                await addDoc(productsRef, {
+                    name: name,
+                    stock: initialStock,
+                    price: price
+                });
+                productNameInput.value = '';
+                initialStockInput.value = '0';
+                productPriceInput.value = '0';
+            } catch (error) {
+                console.error("Error al añadir producto:", error);
+                showModal("Error al Añadir", "No se pudo añadir el producto. Inténtalo de nuevo.");
+            } finally {
+                hideLoading();
+            }
+        }
+
+        /**
+         * Actualiza el stock de un producto existente.
+         * @param {string} productId - ID del producto a actualizar.
+         * @param {number} newStock - Nuevo valor de stock.
+         */
+        async function updateProductStock(productId, newStock) {
+            if (!isAuthReady) return;
+            showLoading();
+            try {
+                const productDocRef = doc(db, `artifacts/${appId}/users/${userId}/products`, productId);
+                await updateDoc(productDocRef, { stock: newStock });
+            } catch (error) {
+                console.error("Error al actualizar stock:", error);
+                showModal("Error de Actualización", "No se pudo actualizar el stock del producto.");
+            } finally {
+                hideLoading();
+            }
+        }
+
+        /**
+         * Elimina un producto del inventario.
+         * @param {string} productId - ID del producto a eliminar.
+         */
+        async function deleteProduct(productId) {
+            if (!isAuthReady) return;
+
+            // Confirmación simulada
+            showModal("Confirmar Eliminación", "¿Estás seguro de que quieres eliminar este producto? Esta acción no se puede deshacer." +
+                      "<div class='mt-4 flex justify-end space-x-2'>" +
+                          "<button id='confirm-delete-btn' class='bg-red-500 text-white px-4 py-2 rounded-md hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-400'>Eliminar</button>" +
+                          "<button onclick='closeModal()' class='bg-gray-300 text-gray-800 px-4 py-2 rounded-md hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-400'>Cancelar</button>" +
+                      "</div>");
+
+            document.getElementById('confirm-delete-btn').onclick = async () => {
+                closeModal(); // Cierra el modal de confirmación
+                showLoading();
+                try {
+                    const productDocRef = doc(db, `artifacts/${appId}/users/${userId}/products`, productId);
+                    await deleteDoc(productDocRef);
+                } catch (error) {
+                    console.error("Error al eliminar producto:", error);
+                    showModal("Error al Eliminar", "No se pudo eliminar el producto. Inténtalo de nuevo.");
+                } finally {
+                    hideLoading();
+                }
+            };
+        }
+
+        /**
+         * Registra una venta de un producto.
+         */
+        async function recordSale() {
+            if (!isAuthReady) {
+                showModal("Inicializando", "Por favor espera a que la aplicación se cargue completamente.");
+                return;
+            }
+
+            const productId = saleProductSelect.value;
+            const quantity = parseInt(saleQuantityInput.value);
+
+            if (!productId || isNaN(quantity) || quantity <= 0) {
+                showModal("Datos Inválidos", "Por favor, selecciona un producto y una cantidad válida para la venta.");
+                return;
+            }
+
+            const product = products[productId];
+            if (!product) {
+                showModal("Producto No Encontrado", "El producto seleccionado no existe.");
+                return;
+            }
+
+            if (product.stock < quantity) {
+                showModal("Stock Insuficiente", `No hay suficiente stock de ${product.name}. Stock actual: ${product.stock}`);
+                return;
+            }
+
+            const newStock = product.stock - quantity;
+            const totalPrice = product.price * quantity;
+
+            showLoading();
+            try {
+                // Actualizar stock en Firestore
+                await updateProductStock(productId, newStock);
+
+                // Registrar venta en Firestore
+                const salesCollectionRef = collection(db, `artifacts/${appId}/users/${userId}/sales`);
+                await addDoc(salesCollectionRef, {
+                    productId: productId,
+                    productName: product.name,
+                    quantity: quantity,
+                    pricePerUnit: product.price,
+                    totalPrice: totalPrice,
+                    timestamp: Date.now() // Guardar timestamp para ordenar
+                });
+
+                saleQuantityInput.value = '1'; // Resetear cantidad
+            } catch (error) {
+                console.error("Error al registrar venta:", error);
+                showModal("Error de Venta", "No se pudo registrar la venta. Inténtalo de nuevo.");
+            } finally {
+                hideLoading();
+            }
+        }
+
+        /**
+         * Renderiza la tabla de inventario con los productos actuales.
+         */
+        function renderInventory() {
+            inventoryList.innerHTML = ''; // Limpiar lista existente
+            const productIds = Object.keys(products);
+
+            if (productIds.length === 0) {
+                inventoryList.innerHTML = `<tr><td colspan="4" class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">No hay productos en el inventario.</td></tr>`;
+                return;
+            }
+
+            productIds.forEach(id => {
+                const product = products[id];
+                const row = document.createElement('tr');
+                row.className = 'hover:bg-gray-50';
+                row.innerHTML = `
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${product.name}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${product.stock}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">COP ${product.price.toLocaleString()}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        <button onclick="updateProductStock('${product.id}', ${product.stock + 1})" class="text-green-600 hover:text-green-900 mr-2">➕</button>
+                        <button onclick="updateProductStock('${product.id}', ${Math.max(0, product.stock - 1)})" class="text-red-600 hover:text-red-900 mr-2">➖</button>
+                        <button onclick="deleteProduct('${product.id}')" class="text-indigo-600 hover:text-indigo-900">🗑️</button>
+                    </td>
+                `;
+                inventoryList.appendChild(row);
+            });
+        }
+
+        /**
+         * Rellena el select de productos para registrar ventas.
+         */
+        function populateProductSelect() {
+            saleProductSelect.innerHTML = '<option value="">Selecciona una empanada</option>';
+            Object.keys(products).forEach(id => {
+                const product = products[id];
+                const option = document.createElement('option');
+                option.value = id;
+                option.textContent = `${product.name} (Stock: ${product.stock})`;
+                saleProductSelect.appendChild(option);
+            });
+        }
+
+        /**
+         * Renderiza la tabla de historial de ventas.
+         */
+        function renderSales() {
+            salesList.innerHTML = ''; // Limpiar lista existente
+
+            if (sales.length === 0) {
+                salesList.innerHTML = `<tr><td colspan="4" class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">No hay ventas registradas.</td></tr>`;
+                return;
+            }
+
+            sales.forEach(sale => {
+                const row = document.createElement('tr');
+                row.className = 'hover:bg-gray-50';
+                const date = new Date(sale.timestamp).toLocaleString();
+                row.innerHTML = `
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${date}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${sale.productName}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${sale.quantity}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">COP ${sale.totalPrice.toLocaleString()}</td>
+                `;
+                salesList.appendChild(row);
+            });
+        }
+
+        /**
+         * Calcula y actualiza los ingresos totales.
+         */
+        function updateTotalIncome() {
+            const total = sales.reduce((sum, sale) => sum + sale.totalPrice, 0);
+            totalIncomeDisplay.textContent = `COP ${total.toLocaleString()}`;
+        }
+
+        // Exponer funciones al scope global para que los onclick funcionen
+        window.addProduct = addProduct;
+        window.updateProductStock = updateProductStock;
+        window.deleteProduct = deleteProduct;
+        window.recordSale = recordSale;
+        window.closeModal = closeModal;
+
+        // Iniciar la aplicación cuando la ventana esté completamente cargada
+        window.onload = initializeFirebase;
+
+    </script>
+</body>
+</html>
