@@ -177,14 +177,24 @@
 
     <!-- Firebase SDKs -->
     <script type="module">
+                // === CONFIGURACIÓN DE FIREBASE ===
+                // Configuración real de tu proyecto Firebase
+                const firebaseConfig = {
+                    apiKey: "AIzaSyAESYPv0fX3L0m-h5yvmJHSdCPIx3O-zCM",
+                    authDomain: "empanadas-app-13d09.firebaseapp.com",
+                    projectId: "empanadas-app-13d09",
+                    storageBucket: "empanadas-app-13d09.firebasestorage.app",
+                    messagingSenderId: "523207787507",
+                    appId: "1:523207787507:web:294ca8666e1fd95a610886"
+                };
+                // Puedes usar cualquier string como appId, por ejemplo:
+                const appId = "empanadas-app";
+                // Si no usas autenticación personalizada, deja esto en null
+                const initialAuthToken = null;
+
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, getDoc, addDoc, setDoc, updateDoc, deleteDoc, onSnapshot, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-
-        // Global Firebase variables (provided by the Canvas environment)
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-        const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
-        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
 
         let app;
         let db;
@@ -256,7 +266,7 @@
                 if (initialAuthToken) {
                     await signInWithCustomToken(auth, initialAuthToken);
                 } else {
-                    await signInAnonymously(auth);
+                    await signInAnónimamente(auth);
                 }
 
                 // Listener para el estado de autenticación
