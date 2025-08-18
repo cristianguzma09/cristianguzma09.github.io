@@ -421,19 +421,25 @@
                           "<button onclick='closeModal()' class='bg-gray-300 text-gray-800 px-4 py-2 rounded-md hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-400'>Cancelar</button>" +
                       "</div>");
 
-            document.getElementById('confirm-delete-btn').onclick = async () => {
-                closeModal(); // Cierra el modal de confirmación
-                showLoading();
-                try {
-                    const productDocRef = doc(db, `artifacts/${appId}/users/${userId}/products`, productId);
-                    await deleteDoc(productDocRef);
-                } catch (error) {
-                    console.error("Error al eliminar producto:", error);
-                    showModal("Error al Eliminar", "No se pudo eliminar el producto. Inténtalo de nuevo.");
-                } finally {
-                    hideLoading();
+            // Esperar a que el DOM se actualice antes de asignar el evento
+            setTimeout(() => {
+                const btn = document.getElementById('confirm-delete-btn');
+                if (btn) {
+                    btn.onclick = async () => {
+                        closeModal(); // Cierra el modal de confirmación
+                        showLoading();
+                        try {
+                            const productDocRef = doc(db, `artifacts/${appId}/users/${userId}/products`, productId);
+                            await deleteDoc(productDocRef);
+                        } catch (error) {
+                            console.error("Error al eliminar producto:", error);
+                            showModal("Error al Eliminar", "No se pudo eliminar el producto. Inténtalo de nuevo.");
+                        } finally {
+                            hideLoading();
+                        }
+                    };
                 }
-            };
+            }, 0);
         }
 
         /**
