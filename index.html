@@ -223,21 +223,24 @@
         const modalMessage = document.getElementById('modal-message');
 
         /**
-         * Muestra el modal personalizado con un título y mensaje.
+         * Muestra el modal personalizado con un título y mensaje (permite HTML en el mensaje).
          * @param {string} title - El título del modal.
-         * @param {string} message - El mensaje a mostrar en el modal.
+         * @param {string} message - El mensaje a mostrar en el modal (puede contener HTML).
          */
         function showModal(title, message) {
             modalTitle.textContent = title;
-            modalMessage.textContent = message;
+            modalMessage.innerHTML = message; // Permitir HTML
             customModal.classList.remove('hidden');
         }
 
         /**
-         * Cierra el modal personalizado.
+         * Cierra el modal personalizado y limpia eventos de botones temporales.
          */
         function closeModal() {
             customModal.classList.add('hidden');
+            // Limpiar posible evento del botón de eliminar
+            const btn = document.getElementById('confirm-delete-btn');
+            if (btn) btn.onclick = null;
         }
 
         /**
